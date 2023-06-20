@@ -1,0 +1,8 @@
+* {
+  overflow: hidden;
+}
+.App {
+  text-align: center;
+  display: flex;
+  flex-direction: row-reverse;
+}

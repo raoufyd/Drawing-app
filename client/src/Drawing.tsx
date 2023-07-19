@@ -1,4 +1,6 @@
 import { MouseEventHandler, useEffect, useRef, useState } from "react";
+import { io, Socket } from "socket.io-client";
+
 import "./Drawing.css";
 interface MouseProps {
   x: number;
@@ -12,6 +14,42 @@ export default function Drawing() {
   const [canvasCTX, setCanvasCTX] = useState<CanvasRenderingContext2D | null>(
     null
   );
+  const [onsocket, setOnsocket] = useState<Socket | null>(null);
+  const [dataFromServer, setDataFromServer] = useState<MouseProps>({
+    x: 0,
+    y: 0,
+  });
+  useEffect(() => {
+    if (!onsocket) {
+      const socket: Socket = io("http://localhost:5000");
+      setOnsocket(socket);
+    }
+  }, []);
+  useEffect(() => {
+    onsocket?.on("connect", () => {
+      console.log("gzgzgz : ");
+    });
+
+    return () => {
+      onsocket?.on("disconnect", () => {
+        console.log("socket disconnected");
+      });
+    };
+  }, [onsocket]);
+  useEffect(() => {
+    if (onsocket) {
+      onsocket.emit("mouseDataToServer", { mouseData });
+      console.log("data mouseDataToClient : ", mouseData);
+    }
+  }, [mouseData]);
+  //useEffect(() => {}, [onsocket]);
+  setInterval(() => {
+    onsocket?.on("mouseDataToClient", (data) => {
+      setDataFromServer(data.mouseData);
+      console.log("data : ", data);
+    });
+  }, 1);
+
   const SetPos: MouseEventHandler<HTMLCanvasElement> = (e) => {
     if (e.buttons !== 1) return;
 
@@ -22,7 +60,6 @@ export default function Drawing() {
     const rect = canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left; // Adjust mouse x-coordinate relative to canvas
     const mouseY = e.clientY - rect.top; // Adjust mouse y-coordinate relative to canvas
-
     setMouseData({
       x: mouseX,
       y: mouseY,
@@ -57,15 +94,20 @@ export default function Drawing() {
     }
 
     ctx.beginPath();
-    ctx.moveTo(mouseData.x, mouseData.y);
+    //ctx.moveTo(mouseData.x, mouseData.y);
+    ctx.moveTo(dataFromServer.x, dataFromServer.y);
+
     setMouseData({
       x: mouseX,
       y: mouseY,
     });
-    ctx.lineTo(mouseX, mouseY);
+
+    //ctx.lineTo(mouseX, mouseY);
+    ctx.lineTo(dataFromServer.x, dataFromServer.y);
     ctx.lineCap = "round";
     ctx.stroke();
   };
+
   useEffect(() => {
     const canvas = canvasRef?.current;
     if (!canvas) {
